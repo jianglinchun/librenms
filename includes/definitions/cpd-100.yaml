@@ -1,0 +1,46 @@
+os: cpd-100
+text: 'CPD 100'
+type: network
+over:
+    - { graph: device_processor, text: 'CPU Usage' }
+    - { graph: device_mempool, text: 'Memory Usage' }
+discovery:
+    -
+        snmpget:
+            oid: SNMPv2-SMI::enterprises.9595.1.1
+            op: 'exists'
+            value: true
+poller_modules:
+    ports: false
+    ports-stack: false
+    vlans: false
+    wireless: false
+    fdb-table: false
+    ipv6-addresses: false
+    storage: false
+    bgp-peers: false
+    arp-table: false
+    mpls: false
+    services: false
+    hr-device: false
+    discovery-protocols: false
+    cisco-vrf-lite: false
+    ucd-diskio: false
+    ospf: false
+discovery_modules:
+    ports: false
+    ports-stack: false
+    vlans: false
+    wireless: false
+    fdb-table: false
+    ipv6-addresses: false
+    storage: false
+    bgp-peers: false
+    arp-table: false
+    mpls: false
+    services: false
+    hr-device: false
+    discovery-protocols: false
+    cisco-vrf-lite: false
+    ucd-diskio: false
+    ospf: false

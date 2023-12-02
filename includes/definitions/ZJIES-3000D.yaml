@@ -1,0 +1,24 @@
+os: ZJIES-3000D
+text: 'ZJIES 3000D'
+type: network
+over:
+    - { graph: device_processor, text: 'CPU Usage' }
+    - { graph: device_mempool, text: 'Memory Usage' }
+discovery:
+    -
+        snmpget:
+            oid: sysDescr.0
+            op: 'starts'
+            value: 'SWITCH ZJIES3000D'
+poller_modules:
+    wireless: false
+    ucd-diskio: false
+    storage: false
+    stp: false
+    hr-device: false
+discovery_modules:
+    wireless: false
+    ucd-diskio: false
+    storage: false
+    stp: false
+    hr-device: false
