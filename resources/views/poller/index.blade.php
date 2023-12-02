@@ -6,7 +6,7 @@
     <div class="col-md-12">
       <ul class="nav nav-tabs">
         <li role="presentation" @if( $current_tab == 'poller' ) class="active" @endif>
-          <a href="{{ route('poller.index') }}"><i class="fa fa-th-large fa-lg icon-theme" aria-hidden="true"></i> {{ __('Poller') }}</a>
+          <a href="{{ route('poller.index') }}"><i class="fa fa-th-large fa-lg icon-theme" aria-hidden="true"></i> </a>
         </li>
         <li role="presentation" @if( $current_tab == 'groups' ) class="active" @endif>
           <a href="{{ route('poller.groups') }}"><i class="fa fa-th fa-lg icon-theme" aria-hidden="true"></i> {{ __('Groups') }}</a>

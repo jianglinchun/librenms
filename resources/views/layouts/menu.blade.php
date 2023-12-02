@@ -83,7 +83,7 @@
                         </li>
                         @if(auth()->user()->isAdmin() || $has_v1_plugins || $has_v2_plugins)
                         <li class="dropdown-submenu">
-                            <a><i class="fa fa-plug fa-fw fa-lg" aria-hidden="true"></i> {{ __('Plugins') }}</a>
+                            <a><i class="fa fa-plug fa-fw fa-lg" aria-hidden="true"></i> {{ __('Plugins')['admin_page'] }}</a>
                             <ul class="dropdown-menu">
                                 {!! $v1_plugin_menu !!}
                                 @foreach($menu_hooks as [$view, $data])
@@ -134,7 +134,7 @@
                         @endconfig
 
                         <li><a href="{{ route('inventory') }}"><i class="fa fa-cube fa-fw fa-lg"
-                                                                aria-hidden="true"></i> {{ __('Inventory') }}</a></li>
+                                                                aria-hidden="true"></i> </a></li>
                         <li><a href="{{ url('outages') }}"><i class="fa fa-bar-chart fa-fw fa-lg"
                                                                aria-hidden="true"></i> {{ __('Outages') }}</a></li>
                         @if($package_count)
@@ -562,9 +562,9 @@
                                                               aria-hidden="true"></i> {{ __('Auth History') }}</a></li>
                         <li role="presentation" class="divider"></li>
                         <li class="dropdown-submenu">
-                            <a href="{{ route('poller.index') }}"><i class="fa fa-th-large fa-fw fa-lg" aria-hidden="true"></i> {{ __('Poller') }}</a>
+                            <a href="{{ route('poller.index') }}"><i class="fa fa-th-large fa-fw fa-lg" aria-hidden="true"></i> </a>
                             <ul class="dropdown-menu">
-                                <li><a href="{{ route('poller.index') }}"><i class="fa fa-th-large fa-fw fa-lg" aria-hidden="true"></i> {{ __('Poller') }}</a></li>
+                                <li><a href="{{ route('poller.index') }}"><i class="fa fa-th-large fa-fw fa-lg" aria-hidden="true"></i> </a></li>
                                 @config('distributed_poller')
                                 <li><a href="{{ route('poller.groups') }}"><i class="fa fa-th fa-fw fa-lg" aria-hidden="true"></i> {{ __('Groups') }}</a></li>
                                 @endconfig
