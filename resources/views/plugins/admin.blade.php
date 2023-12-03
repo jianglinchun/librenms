@@ -30,7 +30,7 @@
                                 @if($plugin->version == 1)
                                     <a href="{{ route('plugin.legacy', $plugin->plugin_name) }}" class="btn btn-sm btn-primary" style="min-width: 72px">{{ __('Page') }}</a>
                                 @else
-                                    <a href="{{ route('plugin.settings', $plugin->plugin_name) }}" class="btn btn-sm btn-primary" style="min-width: 72px">{{ __('Settings')['title'] }}</a>
+                                    <a href="{{ route('plugin.settings', $plugin->plugin_name) }}" class="btn btn-sm btn-primary" style="min-width: 72px">{{ __('Settings') }}</a>
                                 @endif
                             </form>
                         </td>
