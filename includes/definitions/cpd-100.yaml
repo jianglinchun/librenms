@@ -23,10 +23,15 @@ poller_modules:
     mpls: false
     services: false
     hr-device: false
+    hr-mib: false
     discovery-protocols: false
     cisco-vrf-lite: false
     ucd-diskio: false
+    ucd-mib: false
+    ipSystemStats: false
     ospf: false
+    customoid: false
+    ipmi: false
 discovery_modules:
     ports: false
     ports-stack: false
@@ -40,7 +45,11 @@ discovery_modules:
     mpls: false
     services: false
     hr-device: false
+    hr-mib: false
     discovery-protocols: false
     cisco-vrf-lite: false
     ucd-diskio: false
+    ucd-mib: false
     ospf: false
+    ipSystemStats: false
+    ipmi: false

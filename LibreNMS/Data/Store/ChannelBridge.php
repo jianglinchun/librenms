@@ -12,7 +12,11 @@ class ChannelBridge extends BaseDatastore
     {
         parent::__construct();
 
-        ChannelClient::connect('php73', 2161);
+        try {
+            ChannelClient::connect('php73', 2161);
+        } catch (\Throwable $th) {
+            Log::error('ChannelBridge Error: ' . $th->getMessage());
+        }
     }
 
     public function getName()
@@ -25,19 +29,28 @@ class ChannelBridge extends BaseDatastore
         return Config::get('ChannelBridge.enable', true);
     }
 
+    // TODO 进行配置
+    const filtered_measurement = ['poller-perf', 'ospf-statistics', 'netstats-ip_forward', 'availability'];
     public function put($device, $measurement, $tags, $fields)
     {
-        ChannelClient::publish('snmp_get_data', [
-            'device' => [
-                'device_id' => $device['device_id'],
-                'hostname' => $device['hostname'],
-                'sysName' => $device['sysName'],
-                'ip' => $device['ip'],
-                'overwrite_ip' => $device['overwrite_ip']
-            ],
-            'measurement' => $measurement,
-            'tags' => $tags,
-            'fields' => $fields,
-        ]);
+        if (in_array($measurement, $this::filtered_measurement)) {
+            return;
+        }
+        try {
+            ChannelClient::publish('snmp_get_data', [
+                'device' => [
+                    'device_id' => $device['device_id'],
+                    'hostname' => $device['hostname'],
+                    'sysName' => $device['sysName'],
+                    'ip' => $device['ip'],
+                    'overwrite_ip' => $device['overwrite_ip']
+                ],
+                'measurement' => $measurement,
+                'tags' => array_merge($tags, ['rrd_def'=>null]),
+                'fields' => $fields,
+            ]);
+        } catch (\Throwable $th) {
+            Log::error('ChannelBridge Error: ' . $th->getMessage());
+        }
     }
 }
