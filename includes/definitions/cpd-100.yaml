@@ -10,6 +10,7 @@ discovery:
             oid: SNMPv2-SMI::enterprises.9595.1.1
             op: 'exists'
             value: true
+        
 poller_modules:
     ports: false
     ports-stack: false
@@ -32,6 +33,7 @@ poller_modules:
     ospf: false
     customoid: false
     ipmi: false
+    entity-physical: false
 discovery_modules:
     ports: false
     ports-stack: false
@@ -53,3 +55,4 @@ discovery_modules:
     ospf: false
     ipSystemStats: false
     ipmi: false
+    entity-physical: false
