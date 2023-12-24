@@ -7,10 +7,9 @@ over:
 discovery:
     -
         snmpget:
-            oid: SNMPv2-SMI::enterprises.9595.1.1
-            op: 'exists'
-            value: true
-        
+            oid: SNMPv2-SMI::enterprises.9595.1.2
+            op: 'contains'
+            value: ','
 poller_modules:
     ports: false
     ports-stack: false
