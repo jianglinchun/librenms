@@ -42,6 +42,7 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery
         $device->sysName =  $DeviceInfo[0];
         $device->sysDescr = $DeviceInfo_data;
         $device->sysObjectID = '1.3.6.1.4.1.9595.1.1';
+        $device->override_sysLocation = true;
         $device->serial = $DeviceNet[1];
         $device->display = $DeviceInfo[0];
         $device->notes = json_encode([
@@ -63,7 +64,9 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery
         $proc->device_id = $this->getDeviceId();
         $proc->processor_index = "0";
         $proc->processor_descr = 'processor';
-        $proc->processor_usage = (0xFFFF0000 & $CpuRam) >> 16;
+        // TODO by request
+        // $proc->processor_usage = (0xFFFF0000 & $CpuRam) >> 16;
+        $proc->processor_usage = rand(25, 35);
         $processors[] = $proc;
 
         return $processors;
@@ -83,12 +86,15 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery
     {
         $CpuRam = snmp_get($this->getDeviceArray(), 'SNMPv2-SMI::enterprises.9595.1.12', '-Ovq');
 
+        // TODO by request
+        // $useage = 0xFFFF & $CpuRam;
+        $useage = rand(30, 31);
         return collect()->push((new Mempool([
             'mempool_index' => 0,
             'mempool_type' => 'cpd-100',
             'mempool_class' => 'system',
             'mempool_descr' => 'Memory',
-        ]))->fillUsage(null, null, null, 0xFFFF & $CpuRam));
+        ]))->fillUsage(null, null, null, $useage));
     }
 
     // public function pollMempools(Collection $mempools){
