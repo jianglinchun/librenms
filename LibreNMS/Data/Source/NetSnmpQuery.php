@@ -325,7 +325,7 @@ class NetSnmpQuery implements SnmpQueryInterface
         return $this->exec('snmptranslate', [$oid])->value();
     }
 
-    private function buildCli(string $command, array $oids): array
+    public function buildCli(string $command, array $oids): array
     {
         $cmd = $this->initCommand($command, $oids);
 
