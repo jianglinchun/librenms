@@ -54,7 +54,8 @@
         "symfony/yaml": "^6.2",
         "tecnickcom/tcpdf": "^6.4",
         "tightenco/ziggy": "^1.6.0",
-        "workerman/channel": "^1.2"
+        "workerman/channel": "^1.2",
+        "workerman/phpsocket.io": "^2.0"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.8",
