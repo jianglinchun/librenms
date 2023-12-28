@@ -13,7 +13,7 @@ class ChannelBridge extends BaseDatastore
         parent::__construct();
 
         try {
-            ChannelClient::connect('php73', 2161);
+            ChannelClient::connect('127.0.0.1', 2161);
         } catch (\Throwable $th) {
             Log::error('ChannelBridge Error: ' . $th->getMessage());
         }

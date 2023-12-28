@@ -15,12 +15,21 @@ use LibreNMS\Util\Debug;
 use Symfony\Component\Process\Process;
 use LibreNMS\Data\Source\NetSnmpQuery;
 use Log;
+use PHPSocketIO\SocketIO;
+use \Channel\Client as ChannelClient;
 
 class SnmpWorker extends LnmsCommand
 {
     protected $name = 'snmp:worker';
 
+    // TODO Config
+    const LIBRENMS_BRIDGE_CHANNEL_HOST = '0.0.0.0';
+    const LIBRENMS_BRIDGE_CHANNEL_PORT = 2161;
+    const LIBRENMS_BRIDGE_SOCKETIO_PORT = 3161;
+    const LIBRENMS_BRIDGE_MEASUREMENT = ['processors', 'mempool', 'ports', 'sensor'];
+
     protected $worker;
+    protected $socketIO;
 
     /**
      * Create a new command instance.
@@ -36,6 +45,7 @@ class SnmpWorker extends LnmsCommand
         $this->addArgument('stop', null, InputArgument::OPTIONAL, '停止Snmp Worker');
         $this->addOption('deamon', 'd', InputOption::VALUE_NONE, '以deamon方式启动Snmp Worker');
 
+        $this->initSocketIO();
         $this->initWorker();
     }
 
@@ -57,8 +67,12 @@ class SnmpWorker extends LnmsCommand
         // 标记是全局启动
         define('GLOBAL_START', 1);
 
+        // 用于接收LibreNMS/Data/Store/ChannelBridge.php的数据
+        $bms_channel_server = new \Channel\Server($this::LIBRENMS_BRIDGE_CHANNEL_HOST, $this::LIBRENMS_BRIDGE_CHANNEL_PORT);
+
         // TODO 参考配置？？？
         $this->worker = new Worker('http://0.0.0.0:8080');
+        $this->worker->name = 'Snmp Worker Api';
 
         foreach (['onWorkerStart', 'onConnect', 'onMessage', 'onClose', 'onError', 'onBufferFull', 'onBufferDrain', 'onWorkerStop', 'onWorkerReload'] as $event) {
             if (method_exists($this, $event)) {
@@ -70,6 +84,61 @@ class SnmpWorker extends LnmsCommand
 
         // 避免重启以后该文件仍然存在，导致无法启动新进程的问题，所以修改到/tmp目录下
         Worker::$pidFile = '/tmp/snmpworker.pid';
+    }
+
+    protected function initSocketIO()
+    {
+        $io = new SocketIO($this::LIBRENMS_BRIDGE_SOCKETIO_PORT);
+        $this->socketIO = $io;
+        $this->socketIO->on('workerStart', function () use ($io) {
+            ChannelClient::connect($this::LIBRENMS_BRIDGE_CHANNEL_HOST, $this::LIBRENMS_BRIDGE_CHANNEL_PORT);
+
+            // TODO 考虑MQTT
+
+            ChannelClient::on('snmp_get_data', function ($event_data) use ($io) {
+                // https://www.php.net/manual/zh/json.constants.php
+                $snmp_data = json_decode(json_encode($event_data, JSON_PARTIAL_OUTPUT_ON_ERROR));
+                if (!is_object($snmp_data)) {
+                    // var_dump($event_data);
+                    return;
+                }
+                $device = $snmp_data->device;
+                $measurement = $snmp_data->measurement;
+                $tags = $snmp_data->tags;
+                $fields = $snmp_data->fields;
+                if (in_array($measurement, $this::LIBRENMS_BRIDGE_MEASUREMENT)) {
+                    // echo json_encode($snmp_data) . PHP_EOL;
+                    // 通过socketio通知到对应的观察者
+                    // $by_id = $device->device_id;
+                    $by_ip = $device->overwrite_ip;
+                    if (empty($by_ip)) {
+                        $by_ip = $device->ip;
+                    }
+                    if (empty($by_ip)) {
+                        $by_ip = $device->hostname;
+                    }
+                    // $io->to($by_id)->emit($measurement, [$tags, $fields]);
+                    if (!empty($by_ip)) {
+                        $io->to($by_ip)->emit($measurement, [$by_ip, $tags, $fields]);
+                    }
+                } else {
+                    // echo 'snmp:'.$measurement.PHP_EOL;
+                }
+            });
+        });
+        $this->socketIO->on('connection', function ($socket) use ($io) {
+            $headers = $socket->request->headers;
+            $real_ip = $headers['x-real-ip'];
+            $user_agent = $headers['user-agent'];
+            $socket->on('watch', function ($msg) use ($io, $socket, $real_ip) {
+                $socket->join($msg);
+                echo 'watched:' . $real_ip . '-->' . $msg . PHP_EOL;
+            });
+            $socket->on('unWatch', function ($msg) use ($io, $socket, $real_ip) {
+                $socket->leave($msg);
+                echo 'unWatched:' . $real_ip . '-->' . $msg . PHP_EOL;
+            });
+        });
     }
 
     public function onWorkerStart()
@@ -160,6 +229,11 @@ class SnmpWorker extends LnmsCommand
             'snmp_result' => $snmp,
             'cmd_result' => $cmd_result
         ], JSON_UNESCAPED_UNICODE));
+
+        // TODO review clean
+        unset($snmp);
+        unset($cmd);
+        unset($cmd_result);
     }
 
     public function onWorkerStop()
