@@ -16,15 +16,13 @@ use Symfony\Component\Process\Process;
 use LibreNMS\Data\Source\NetSnmpQuery;
 use Log;
 use PHPSocketIO\SocketIO;
-use \Channel\Client as ChannelClient;
+use Workerman\Redis\Client as RedisClient;
 
 class SnmpWorker extends LnmsCommand
 {
     protected $name = 'snmp:worker';
 
-    // TODO Config
-    const LIBRENMS_BRIDGE_CHANNEL_HOST = '0.0.0.0';
-    const LIBRENMS_BRIDGE_CHANNEL_PORT = 2161;
+    // TODO 配置界面
     const LIBRENMS_BRIDGE_SOCKETIO_PORT = 3161;
     const LIBRENMS_BRIDGE_MEASUREMENT = ['processors', 'mempool', 'ports', 'sensor'];
 
@@ -67,10 +65,7 @@ class SnmpWorker extends LnmsCommand
         // 标记是全局启动
         define('GLOBAL_START', 1);
 
-        // 用于接收LibreNMS/Data/Store/ChannelBridge.php的数据
-        $bms_channel_server = new \Channel\Server($this::LIBRENMS_BRIDGE_CHANNEL_HOST, $this::LIBRENMS_BRIDGE_CHANNEL_PORT);
-
-        // TODO 参考配置？？？
+        // TODO 配置参数及界面？
         $this->worker = new Worker('http://0.0.0.0:8080');
         $this->worker->name = 'Snmp Worker Api';
 
@@ -91,15 +86,17 @@ class SnmpWorker extends LnmsCommand
         $io = new SocketIO($this::LIBRENMS_BRIDGE_SOCKETIO_PORT);
         $this->socketIO = $io;
         $this->socketIO->on('workerStart', function () use ($io) {
-            ChannelClient::connect($this::LIBRENMS_BRIDGE_CHANNEL_HOST, $this::LIBRENMS_BRIDGE_CHANNEL_PORT);
-
-            // TODO 考虑MQTT
-
-            ChannelClient::on('snmp_get_data', function ($event_data) use ($io) {
+            // TODO redis地址可配置
+            $redis = new RedisClient('redis://redis:6379');
+            // TODO topic可配置
+            // Workerman redis组件参考
+            //  不能采用phpredis，否则会导致整个进程busy !!!!!
+            //  必须采用Workerman\Redis\Client
+            //  https://www.workerman.net/doc/workerman/components/workerman-redis.html
+            $redis->psubscribe(['snmp:*'], function ($pattern, $channel, $message) use ($io) {
                 // https://www.php.net/manual/zh/json.constants.php
-                $snmp_data = json_decode(json_encode($event_data, JSON_PARTIAL_OUTPUT_ON_ERROR));
+                $snmp_data = json_decode($message, false, JSON_PARTIAL_OUTPUT_ON_ERROR);
                 if (!is_object($snmp_data)) {
-                    // var_dump($event_data);
                     return;
                 }
                 $device = $snmp_data->device;
@@ -124,6 +121,13 @@ class SnmpWorker extends LnmsCommand
                 } else {
                     // echo 'snmp:'.$measurement.PHP_EOL;
                 }
+
+                unset($message);
+                unset($snmp_data);
+                unset($device);
+                unset($measurement);
+                unset($tags);
+                unset($fields);
             });
         });
         $this->socketIO->on('connection', function ($socket) use ($io) {
@@ -143,6 +147,7 @@ class SnmpWorker extends LnmsCommand
 
     public function onWorkerStart()
     {
+
     }
 
     // 处理HTTP请求

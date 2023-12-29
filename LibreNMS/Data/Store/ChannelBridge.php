@@ -8,12 +8,15 @@ use \Channel\Client as ChannelClient;
 
 class ChannelBridge extends BaseDatastore
 {
+    protected $redis;
+
     public function __construct()
     {
         parent::__construct();
 
+        $this->redis = new \Redis();
         try {
-            ChannelClient::connect('127.0.0.1', 2161);
+            $this->redis->connect('redis', 6379);
         } catch (\Throwable $th) {
             Log::error('ChannelBridge Error: ' . $th->getMessage());
         }
@@ -37,7 +40,8 @@ class ChannelBridge extends BaseDatastore
             return;
         }
         try {
-            ChannelClient::publish('snmp_get_data', [
+            $topic = 'snmp:'.$device['hostname'].':'.$measurement;
+            $this->redis->publish($topic, json_encode([
                 'device' => [
                     'device_id' => $device['device_id'],
                     'hostname' => $device['hostname'],
@@ -48,7 +52,7 @@ class ChannelBridge extends BaseDatastore
                 'measurement' => $measurement,
                 'tags' => array_merge($tags, ['rrd_def'=>null]),
                 'fields' => $fields,
-            ]);
+            ], JSON_UNESCAPED_UNICODE));
         } catch (\Throwable $th) {
             Log::error('ChannelBridge Error: ' . $th->getMessage());
         }

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7414fc45784c70b57936e8a1da00d4d3",
+    "content-hash": "a707f6e7db2f46d0e81f1679c8a85246",
     "packages": [
         {
             "name": "amenadiel/jpgraph",
@@ -8988,6 +8988,41 @@
                 }
             ],
             "time": "2023-07-18T00:36:23+00:00"
+        },
+        {
+            "name": "workerman/redis",
+            "version": "v2.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/walkor/redis.git",
+                "reference": "542f10c243ba846f1f3b4c07a26136c5fa80d972"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/walkor/redis/zipball/542f10c243ba846f1f3b4c07a26136c5fa80d972",
+                "reference": "542f10c243ba846f1f3b4c07a26136c5fa80d972",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7",
+                "workerman/workerman": "^4.1.0||^5.0.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Workerman\\Redis\\": "./src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "homepage": "http://www.workerman.net",
+            "support": {
+                "issues": "https://github.com/walkor/redis/issues",
+                "source": "https://github.com/walkor/redis/tree/v2.0.2"
+            },
+            "time": "2023-06-08T01:39:47+00:00"
         },
         {
             "name": "workerman/workerman",
