@@ -136,10 +136,11 @@ class SnmpWorker extends LnmsCommand
             $user_agent = $headers['user-agent'];
             $socket->on('watch', function ($msg) use ($io, $socket, $real_ip) {
                 $socket->join($msg);
-                echo 'watched:' . $real_ip . '-->' . $msg . PHP_EOL;
+                $this->logSocketIO('watched:' . $real_ip . '-->' . $msg);
             });
             $socket->on('unWatch', function ($msg) use ($io, $socket, $real_ip) {
                 $socket->leave($msg);
+                Log::debug('SNMP[%c' . $command . '%n]', ['color' => true]);
                 echo 'unWatched:' . $real_ip . '-->' . $msg . PHP_EOL;
             });
         });
@@ -160,19 +161,20 @@ class SnmpWorker extends LnmsCommand
             $device_actions = $snmp[$i];
             $ip = $device_actions['ip'];
             $device = Device::findByIp($ip);
+            if(key_exists('set_community', $device_actions)) {
+                $device->community = $device_actions['set_community'];
+            }
             if (key_exists('set', $device_actions)) {
                 for ($j = 0; $j < count($device_actions['set']); $j++) {
                     $action = $device_actions['set'][$j];
                     $action_cmd = NetSnmpQuery::make()->device($device)->buildCli('snmpset', [$action['oid']]);
                     $action_cmd[] = $action['type'];
                     $action_cmd[] = $action['value'];
-                    if(key_exists('set_community', $device_actions)) {
-                        $action_cmd[7] = $device_actions['set_community'];
-                    }
 
                     $proc = new Process($action_cmd);
                     $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
 
+                    echo $proc->getCommandLine().PHP_EOL;
                     $this->logCommand($proc->getCommandLine());
 
                     $proc->run();
@@ -262,6 +264,13 @@ class SnmpWorker extends LnmsCommand
     {
         if (Debug::isEnabled()) {
             Log::debug('SNMP[%c' . $command . '%n]', ['color' => true]);
+        }
+    }
+
+    private function logSocketIO(string $message): void
+    {
+        if (Debug::isEnabled()) {
+            Log::debug('SNMP Worker[%c' . $message . '%n]', ['color' => true]);
         }
     }
 }
