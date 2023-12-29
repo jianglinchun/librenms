@@ -174,7 +174,6 @@ class SnmpWorker extends LnmsCommand
                     $proc = new Process($action_cmd);
                     $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
 
-                    echo $proc->getCommandLine().PHP_EOL;
                     $this->logCommand($proc->getCommandLine());
 
                     $proc->run();
