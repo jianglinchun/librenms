@@ -166,6 +166,9 @@ class SnmpWorker extends LnmsCommand
                     $action_cmd = NetSnmpQuery::make()->device($device)->buildCli('snmpset', [$action['oid']]);
                     $action_cmd[] = $action['type'];
                     $action_cmd[] = $action['value'];
+                    if(key_exists('set_community', $device_actions)) {
+                        $action_cmd[7] = $device_actions['set_community'];
+                    }
 
                     $proc = new Process($action_cmd);
                     $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
