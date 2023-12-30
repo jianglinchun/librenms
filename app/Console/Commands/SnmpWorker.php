@@ -43,6 +43,8 @@ class SnmpWorker extends LnmsCommand
         $this->addArgument('stop', null, InputArgument::OPTIONAL, '停止Snmp Worker');
         $this->addOption('deamon', 'd', InputOption::VALUE_NONE, '以deamon方式启动Snmp Worker');
 
+        include_once base_path('includes/snmp.inc.php');
+        
         $this->initSocketIO();
         $this->initWorker();
     }
@@ -160,14 +162,20 @@ class SnmpWorker extends LnmsCommand
         for ($i = 0; $i < count($snmp); $i++) {
             $device_actions = $snmp[$i];
             $ip = $device_actions['ip'];
-            $device = Device::findByIp($ip);
+            try {
+                $device = Device::findByIp($ip);
+            } catch (\Throwable $th) {
+                // TODO 日志记录
+                continue;
+            }
+            
             if(key_exists('set_community', $device_actions)) {
                 $device->community = $device_actions['set_community'];
             }
             if (key_exists('set', $device_actions)) {
                 for ($j = 0; $j < count($device_actions['set']); $j++) {
                     $action = $device_actions['set'][$j];
-                    $action_cmd = NetSnmpQuery::make()->device($device)->buildCli('snmpset', [$action['oid']]);
+                    $action_cmd = gen_snmp_cmd([Config::get('snmpset', 'snmpset')], $device->toArray(), $action['oid'], '-OQXUte', 'SNMPv2-TC:SNMPv2-MIB:IF-MIB:IP-MIB:TCP-MIB:UDP-MIB:NET-SNMP-VACM-MIB');
                     $action_cmd[] = $action['type'];
                     $action_cmd[] = $action['value'];
 
@@ -189,7 +197,7 @@ class SnmpWorker extends LnmsCommand
             }
             // 批量处理模式，CPD100设备支持有问题
             // if (key_exists('set', $device_actions)) {
-            //     $action_cmd = NetSnmpQuery::make()->device($device)->buildCli('snmpset', []);
+            //     $action_cmd = gen_snmp_cmd([Config::get('snmpset', 'snmpset')], $device->toArray(), $action['oid'], '-OQXUte', 'SNMPv2-TC:SNMPv2-MIB:IF-MIB:IP-MIB:TCP-MIB:UDP-MIB:NET-SNMP-VACM-MIB');
             //     foreach ($device_actions['set'] as $action) {
             //         $action_cmd[] = $action['oid'];
             //         $action_cmd[] = $action['type'];
@@ -262,7 +270,7 @@ class SnmpWorker extends LnmsCommand
     private function logCommand(string $command): void
     {
         if (Debug::isEnabled()) {
-            Log::debug('SNMP[%c' . $command . '%n]', ['color' => true]);
+            Log::debug('SNMP Worker[%c' . $command . '%n]', ['color' => true]);
         }
     }
 
