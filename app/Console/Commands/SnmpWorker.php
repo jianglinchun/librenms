@@ -11,10 +11,8 @@ use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use LibreNMS\Config;
 use App\Models\Device;
-use Hamcrest\Text\IsEmptyString;
 use LibreNMS\Util\Debug;
 use Symfony\Component\Process\Process;
-use LibreNMS\Data\Source\NetSnmpQuery;
 use Log;
 use PHPSocketIO\SocketIO;
 use Workerman\Redis\Client as RedisClient;
@@ -71,6 +69,9 @@ class SnmpWorker extends LnmsCommand
 
         // TODO 配置参数及界面？
         $this->worker = new Worker('http://0.0.0.0:8080');
+        // 进程数量设置参考
+        //  https://www.workerman.net/doc/workerman/faq/processes-count.html
+        $this->worker->count = 4 * 3;
         $this->worker->name = 'Snmp Worker Api';
 
         foreach (['onWorkerStart', 'onConnect', 'onMessage', 'onClose', 'onError', 'onBufferFull', 'onBufferDrain', 'onWorkerStop', 'onWorkerReload'] as $event) {
