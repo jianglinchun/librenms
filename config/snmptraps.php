@@ -150,5 +150,6 @@ return [
         'VEEAM-MIB::onSobrOffloadFinished' => \LibreNMS\Snmptrap\Handlers\VeeamSobrOffloadFinished::class,
         'VEEAM-MIB::onCdpRpoReport' => \LibreNMS\Snmptrap\Handlers\VeeamCdpRpoReport::class,
         'HP-ICF-FAULT-FINDER-MIB::hpicfFaultFinderTrap' => \LibreNMS\Snmptrap\Handlers\HpFault::class,
+        'SNMPv2-SMI::enterprises.9595.1.16' => \LibreNMS\Snmptrap\Handlers\Cpd100Trap::class
     ],
 ];
