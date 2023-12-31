@@ -11,6 +11,7 @@ use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 use LibreNMS\Config;
 use App\Models\Device;
+use Hamcrest\Text\IsEmptyString;
 use LibreNMS\Util\Debug;
 use Symfony\Component\Process\Process;
 use LibreNMS\Data\Source\NetSnmpQuery;
@@ -25,6 +26,7 @@ class SnmpWorker extends LnmsCommand
     // TODO 配置界面
     const LIBRENMS_BRIDGE_SOCKETIO_PORT = 3161;
     const LIBRENMS_BRIDGE_MEASUREMENT = ['processors', 'mempool', 'ports', 'sensor'];
+    const SNMP_SET_TYPE = ['i', 'u', 't', 'a', 'o', 's', 'x', 'd', 'b'];
 
     protected $worker;
     protected $socketIO;
@@ -44,7 +46,7 @@ class SnmpWorker extends LnmsCommand
         $this->addOption('deamon', 'd', InputOption::VALUE_NONE, '以deamon方式启动Snmp Worker');
 
         include_once base_path('includes/snmp.inc.php');
-        
+
         $this->initSocketIO();
         $this->initWorker();
     }
@@ -106,7 +108,6 @@ class SnmpWorker extends LnmsCommand
                 $tags = $snmp_data->tags;
                 $fields = $snmp_data->fields;
                 if (in_array($measurement, $this::LIBRENMS_BRIDGE_MEASUREMENT)) {
-                    // echo json_encode($snmp_data) . PHP_EOL;
                     // 通过socketio通知到对应的观察者
                     // $by_id = $device->device_id;
                     $by_ip = $device->overwrite_ip;
@@ -142,15 +143,13 @@ class SnmpWorker extends LnmsCommand
             });
             $socket->on('unWatch', function ($msg) use ($io, $socket, $real_ip) {
                 $socket->leave($msg);
-                Log::debug('SNMP[%c' . $command . '%n]', ['color' => true]);
-                echo 'unWatched:' . $real_ip . '-->' . $msg . PHP_EOL;
+                $this->logSocketIO('watched:' . $real_ip . '-->' . $msg);
             });
         });
     }
 
     public function onWorkerStart()
     {
-
     }
 
     // 处理HTTP请求
@@ -158,76 +157,148 @@ class SnmpWorker extends LnmsCommand
     {
         $snmp = $request->post('snmp', []);
         $cmd = $request->post('cmd', []);
+        $parallel = $request->post('parallel', false);
+        $multi_set = $request->post('multi_set', false);
 
+        // 并行指令
+        $parallel_cmd = [];
         for ($i = 0; $i < count($snmp); $i++) {
             $device_actions = $snmp[$i];
-            $ip = $device_actions['ip'];
-            try {
-                $device = Device::findByIp($ip);
-            } catch (\Throwable $th) {
-                // TODO 日志记录
+            if (!array_key_exists('ip', $device_actions) || empty($device_actions['ip'])) {
                 continue;
             }
-            
-            if(key_exists('set_community', $device_actions)) {
+            $device = Device::findByIp($device_actions['ip']);
+            if (!$device) {
+                continue;
+            }
+
+            if (key_exists('set_community', $device_actions)) {
                 $device->community = $device_actions['set_community'];
             }
-            if (key_exists('set', $device_actions)) {
-                for ($j = 0; $j < count($device_actions['set']); $j++) {
-                    $action = $device_actions['set'][$j];
-                    $action_cmd = gen_snmp_cmd([Config::get('snmpset', 'snmpset')], $device->toArray(), $action['oid'], '-OQXUte', 'SNMPv2-TC:SNMPv2-MIB:IF-MIB:IP-MIB:TCP-MIB:UDP-MIB:NET-SNMP-VACM-MIB');
-                    $action_cmd[] = $action['type'];
-                    $action_cmd[] = $action['value'];
+            if (!key_exists('set', $device_actions)) {
+                continue;
+            }
 
-                    $proc = new Process($action_cmd);
+            $device_snmp_cmd = '';
+            $device_cmd = null;
+            for ($j = 0; $j < count($device_actions['set']); $j++) {
+                $action = $device_actions['set'][$j];
+                // 校验不通过不予执行
+                if (!$this->validateSnmpSet($action)) {
+                    continue;
+                }
+
+                // 批量设置oid的模式
+                if ($multi_set) {
+                    if (!isset($device_cmd)) {
+                        $device_cmd = gen_snmp_cmd([Config::get('snmpset', 'snmpset')], $device->toArray(), $action['oid'], '-OQXUte', 'SNMPv2-TC:SNMPv2-MIB:IF-MIB:IP-MIB:TCP-MIB:UDP-MIB:NET-SNMP-VACM-MIB');
+                        $device_cmd[] = $action['type'];
+                        $device_cmd[] = $action['value'];
+                        continue;
+                    }
+                    $device_cmd[] = $action['oid'];
+                    $device_cmd[] = $action['type'];
+                    $device_cmd[] = $action['value'];
+                    continue;
+                }
+
+                $action_cmd = gen_snmp_cmd([Config::get('snmpset', 'snmpset')], $device->toArray(), $action['oid'], '-OQXUte', 'SNMPv2-TC:SNMPv2-MIB:IF-MIB:IP-MIB:TCP-MIB:UDP-MIB:NET-SNMP-VACM-MIB');
+                $action_cmd[] = $action['type'];
+                $action_cmd[] = $action['value'];
+
+                $proc = new Process($action_cmd);
+                $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
+
+                $this->logCommand($proc->getCommandLine());
+
+                if ($parallel) {
+                    if (strlen($device_snmp_cmd) > 0) {
+                        $device_snmp_cmd .= ' && ';
+                    }
+                    // 采用Process格式化参数的能力，确保接正确处理参数
+                    $device_snmp_cmd .= $proc->getCommandLine();
+
+                    unset($action_cmd);
+                    unset($proc);
+                    continue;
+                }
+
+                $proc->run();
+                $exitCode = $proc->getExitCode();
+                $output = $proc->getOutput();
+                $stderr = $proc->getErrorOutput();
+
+                $snmp[$i]['set'][$j]['result'] = [
+                    'exitCode' => $exitCode,
+                    'stderr' => $stderr
+                ];
+
+                unset($proc);
+                unset($exitCode);
+                unset($output);
+                unset($stderr);
+            }
+
+            if ($parallel) {
+                if (isset($device_cmd)) {
+                    // 用来格式化参数，确保没有问题
+                    $proc = new Process($device_cmd);
                     $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
 
-                    $this->logCommand($proc->getCommandLine());
-
-                    $proc->run();
-                    $exitCode = $proc->getExitCode();
-                    $output = $proc->getOutput();
-                    $stderr = $proc->getErrorOutput();
-
-                    $snmp[$i]['set'][$j]['result'] = [
-                        'exitCode' => $exitCode,
-                        'stderr' => $stderr
-                    ];
+                    $parallel_cmd[] = $proc->getCommandLine();
+                    unset($proc);
+                    continue;
                 }
+
+                if (empty($device_snmp_cmd)) {
+                    continue;
+                }
+                // Debug
+                // $parallel_cmd[] = "'ping' '-n' '-c' '100' '" . $device_actions['ip'] . "' && " . $device_snmp_cmd;
+                $parallel_cmd[] = $device_snmp_cmd;
+                unset($device_cmd);
+                unset($device_snmp_cmd);
+                // 批量模式稍后执行
+                continue;
             }
-            // 批量处理模式，CPD100设备支持有问题
-            // if (key_exists('set', $device_actions)) {
-            //     $action_cmd = gen_snmp_cmd([Config::get('snmpset', 'snmpset')], $device->toArray(), $action['oid'], '-OQXUte', 'SNMPv2-TC:SNMPv2-MIB:IF-MIB:IP-MIB:TCP-MIB:UDP-MIB:NET-SNMP-VACM-MIB');
-            //     foreach ($device_actions['set'] as $action) {
-            //         $action_cmd[] = $action['oid'];
-            //         $action_cmd[] = $action['type'];
-            //         $action_cmd[] = $action['value'];
-            //     }
-            //     $proc = new Process($action_cmd);
-            //     $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
 
-            //     $this->logCommand($proc->getCommandLine());
+            if (isset($device_cmd)) {
+                $proc = new Process($device_cmd);
+                $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
 
-            //     $proc->run();
-            //     $exitCode = $proc->getExitCode();
-            //     $output = $proc->getOutput();
-            //     $stderr = $proc->getErrorOutput();
+                $this->logCommand($proc->getCommandLine());
+                $proc->run();
+                $exitCode = $proc->getExitCode();
+                $output = $proc->getOutput();
+                $stderr = $proc->getErrorOutput();
 
-            //     $action['result'] = [
-            //         'exitCode' => $exitCode,
-            //         'stderr' => $stderr
-            //     ];
-            // }
+                unset($proc);
+                unset($exitCode);
+                unset($output);
+                unset($stderr);
+            }
+        }
+
+        if (count($parallel_cmd) > 0) {
+            $this->parallelExcute($parallel_cmd);
+            unset($parallel_cmd);
         }
 
         $cmd_result = [];
+        $parallel_cmd = [];
         foreach ($cmd as $command) {
 
             $proc = new Process(explode(' ', $command));
             $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
 
             $this->logCommand($proc->getCommandLine());
+            if ($parallel) {
+                $parallel_cmd[] = $proc->getCommandLine();
+                unset($proc);
+                continue;
+            }
 
+            // 这样启动会产生defunct
             $proc->run();
             $exitCode = $proc->getExitCode();
             $output = $proc->getOutput();
@@ -240,6 +311,16 @@ class SnmpWorker extends LnmsCommand
                     'stderr' => $stderr
                 ]
             ];
+
+            unset($proc);
+            unset($exitCode);
+            unset($output);
+            unset($stderr);
+        }
+
+        if (count($parallel_cmd) > 0) {
+            $this->parallelExcute($parallel_cmd);
+            unset($parallel_cmd);
         }
 
         $connection->send(json_encode([
@@ -251,6 +332,8 @@ class SnmpWorker extends LnmsCommand
         unset($snmp);
         unset($cmd);
         unset($cmd_result);
+        unset($parallel);
+        unset($multi_set);
     }
 
     public function onWorkerStop()
@@ -265,6 +348,44 @@ class SnmpWorker extends LnmsCommand
     public function handle(DynamicConfig $definition)
     {
         Worker::runAll();
+    }
+
+    // 验证set action数据结构
+    private function validateSnmpSet($action)
+    {
+        $key_check = array_key_exists('oid', $action) && array_key_exists('type', $action) && array_key_exists('value', $action);
+        if (!$key_check) {
+            return false;
+        }
+        if (!in_array($action['type'], $this::SNMP_SET_TYPE)) {
+            return false;
+        }
+        // $value_check = empty($action['oid']) || empty($action['type']) || empty($action['value']);
+        // if ($value_check) {
+        //     return false;
+        // }
+        return true;
+    }
+
+    // 并行执行指令
+    private function parallelExcute($parallel_cmd)
+    {
+        // parallel excute, Only for *unix
+        $proc = Process::fromShellCommandline('echo -e "' . implode('\n', $parallel_cmd) . '" | ' . Config::get('parallel', 'parallel'));
+        $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
+
+        $this->logCommand($proc->getCommandLine());
+
+        // run parallel excute for snmpset first
+        $proc->run();
+        $exitCode = $proc->getExitCode();
+        $output = $proc->getOutput();
+        $stderr = $proc->getErrorOutput();
+
+        unset($proc);
+        unset($exitCode);
+        unset($output);
+        unset($stderr);
     }
 
     private function logCommand(string $command): void
