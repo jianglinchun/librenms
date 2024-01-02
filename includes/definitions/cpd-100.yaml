@@ -33,6 +33,7 @@ poller_modules:
     customoid: false
     ipmi: false
     entity-physical: false
+    stp: false
 discovery_modules:
     ports: false
     ports-stack: false
@@ -55,3 +56,4 @@ discovery_modules:
     ipSystemStats: false
     ipmi: false
     entity-physical: false
+    stp: false

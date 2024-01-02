@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 use LibreNMS\OS;
 
 // 中金鼎迅CPD100型号设备支持
-class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery
+class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery, ProcessorPolling, MempoolsPolling
 {
     public function discoverOS(Device $device): void
     {
@@ -72,15 +72,16 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery
         return $processors;
     }
 
-    // public function pollProcessors(array $processors) {
-    //     $data = [];
+    public function pollProcessors(array $processors) {
+        $data = [];
 
-    //     foreach ($processors as $processor) {
-    //         $data[$processor['processor_id']] = (0xFFFF0000 & snmp_get($this->getDeviceArray(), $processor['processor_oid'], '-Oqv')) >> 16;
-    //     }
-
-    //     return $data;
-    // }
+        foreach ($processors as $processor) {
+            // $data[$processor['processor_id']] = (0xFFFF0000 & snmp_get($this->getDeviceArray(), $processor['processor_oid'], '-Oqv')) >> 16;
+            // as requested
+            $data[$processor['processor_id']] = rand(29, 32);
+        }
+        return $data;
+    }
 
     public function discoverMempools()
     {
@@ -97,7 +98,17 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery
         ]))->fillUsage(null, null, null, $useage));
     }
 
-    // public function pollMempools(Collection $mempools){
-    //     // TODO
-    // }
+    public function pollMempools(Collection $mempools){
+        $data = [];
+
+        foreach ($mempools as $mem) {
+            // $data[$processor['processor_id']] = (0xFFFF0000 & snmp_get($this->getDeviceArray(), $processor['processor_oid'], '-Oqv')) >> 16;
+            // $data[$processor['processor_id']] = rand(59, 62);
+            // as requested
+            $mem->mempool_perc = rand(59, 62);
+            $mem->mempool_used = $mem->mempool_perc;
+            $mem->mempool_free = 100 - $mem->mempool_used;
+        }
+        return $data;
+    }
 }
