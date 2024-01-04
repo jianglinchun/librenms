@@ -27,6 +27,7 @@ use App\Models\Device;
 use LibreNMS\Enum\Severity;
 use LibreNMS\Interfaces\SnmptrapHandler;
 use LibreNMS\Snmptrap\Trap;
+use App\Models\Eventlog;
 
 class Cpd100Trap implements SnmptrapHandler
 {
@@ -71,6 +72,21 @@ class Cpd100Trap implements SnmptrapHandler
         });
         foreach ($alarm_result as $alarm_message => $alarm_flag) {
             $trap->log('SNMP Trap: Cpd-100 Alarm [' . $alarm_message . ']', Severity::Warning);
+        }
+    }
+
+    // 单独为了记录
+    public function _handle($device, $alarmData)
+    {
+        $alarm = [];
+        for ($i = 0; $i < 19; $i++) {
+            $alarm[] = ($alarmData >> $i) & 0x1;
+        }
+        $alarm_result = array_filter(array_combine($this::alarmPos, $alarm), function ($arr) {
+            return $arr == 1;
+        });
+        foreach ($alarm_result as $alarm_message => $alarm_flag) {
+            Eventlog::log('SNMP Trap: Cpd-100 Alarm [' . $alarm_message . ']', $device, 'trap', Severity::Warning, null);
         }
     }
 }

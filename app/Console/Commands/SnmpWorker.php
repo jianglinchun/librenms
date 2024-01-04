@@ -16,6 +16,8 @@ use Symfony\Component\Process\Process;
 use Log;
 use PHPSocketIO\SocketIO;
 use Workerman\Redis\Client as RedisClient;
+use LibreNMS\Snmptrap\Listener as TrapListener;
+use FreeDSx\Snmp\TrapSink;
 
 class SnmpWorker extends LnmsCommand
 {
@@ -28,6 +30,8 @@ class SnmpWorker extends LnmsCommand
 
     protected $worker;
     protected $socketIO;
+    protected $trapReceiver;
+    protected $snmpEncoder;
 
     /**
      * Create a new command instance.
@@ -45,6 +49,7 @@ class SnmpWorker extends LnmsCommand
 
         include_once base_path('includes/snmp.inc.php');
 
+        $this->initTrapReceiver();
         $this->initSocketIO();
         $this->initWorker();
     }
@@ -86,13 +91,27 @@ class SnmpWorker extends LnmsCommand
         Worker::$pidFile = '/tmp/snmpworker.pid';
     }
 
+    // CPD100专用Trap?
+    protected function initTrapReceiver()
+    {
+        $this->trapReceiver = new Worker('');
+        $this->trapReceiver->name = 'CPD100 Trap Receiver';
+        $this->trapReceiver->onWorkerStart = function () {
+            $listener = new TrapListener();
+            $trapSink = new TrapSink($listener, [
+                'port' => 666
+            ]);
+            $trapSink->listen();
+        };
+    }
+
     protected function initSocketIO()
     {
         $io = new SocketIO($this::LIBRENMS_BRIDGE_SOCKETIO_PORT);
         $this->socketIO = $io;
         $this->socketIO->on('workerStart', function () use ($io) {
             // TODO consider support redis username/password auth & db select
-            $redis = new RedisClient('redis://'.env('REDIS_HOST', '127.0.0.1').':'.env('REDIS_PORT', '6379'));
+            $redis = new RedisClient('redis://' . env('REDIS_HOST', '127.0.0.1') . ':' . env('REDIS_PORT', '6379'));
             // TODO topic可配置
             // Workerman redis组件参考
             //  不能采用phpredis，否则会导致整个进程busy !!!!!
