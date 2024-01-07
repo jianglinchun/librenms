@@ -105,6 +105,7 @@ class SnmpWorker extends LnmsCommand
         };
     }
 
+    const redis_subscribe_channel = ['snmp:*', 'snmptrap:*'];
     protected function initSocketIO()
     {
         $io = new SocketIO($this::LIBRENMS_BRIDGE_SOCKETIO_PORT);
@@ -117,7 +118,12 @@ class SnmpWorker extends LnmsCommand
             //  不能采用phpredis，否则会导致整个进程busy !!!!!
             //  必须采用Workerman\Redis\Client
             //  https://www.workerman.net/doc/workerman/components/workerman-redis.html
-            $redis->psubscribe(['snmp:*'], function ($pattern, $channel, $message) use ($io) {
+            $redis->psubscribe(self::redis_subscribe_channel, function ($pattern, $channel, $message) use ($io) {
+                $pattern_index = array_search($pattern, self::redis_subscribe_channel);
+                if ($pattern_index > 0) {
+                    $io->emit('snmptrap', json_decode($message, true));
+                    return;
+                }
                 // https://www.php.net/manual/zh/json.constants.php
                 $snmp_data = json_decode($message, false, JSON_PARTIAL_OUTPUT_ON_ERROR);
                 if (!is_object($snmp_data)) {
