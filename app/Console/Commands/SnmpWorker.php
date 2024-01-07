@@ -49,7 +49,7 @@ class SnmpWorker extends LnmsCommand
 
         include_once base_path('includes/snmp.inc.php');
 
-        $this->initTrapReceiver();
+        // $this->initTrapReceiver();
         $this->initSocketIO();
         $this->initWorker();
     }
@@ -122,6 +122,10 @@ class SnmpWorker extends LnmsCommand
                 $pattern_index = array_search($pattern, self::redis_subscribe_channel);
                 if ($pattern_index > 0) {
                     $io->emit('snmptrap', json_decode($message, true));
+                    unset($pattern);
+                    unset($channel);
+                    unset($message);
+                    unset($pattern_index);
                     return;
                 }
                 // https://www.php.net/manual/zh/json.constants.php
