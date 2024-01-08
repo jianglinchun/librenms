@@ -18,6 +18,7 @@ use PHPSocketIO\SocketIO;
 use Workerman\Redis\Client as RedisClient;
 use LibreNMS\Snmptrap\Listener as TrapListener;
 use FreeDSx\Snmp\TrapSink;
+use Workerman\Lib\Timer;
 
 class SnmpWorker extends LnmsCommand
 {
@@ -49,6 +50,7 @@ class SnmpWorker extends LnmsCommand
 
         include_once base_path('includes/snmp.inc.php');
 
+        $this->_queue = new \SplPriorityQueue();
         // $this->initTrapReceiver();
         $this->initSocketIO();
         $this->initWorker();
@@ -162,6 +164,8 @@ class SnmpWorker extends LnmsCommand
                 unset($tags);
                 unset($fields);
             });
+
+            $io->timer = Timer::add(10, array($this, 'fastRefresh'), array(), true);
         });
         $this->socketIO->on('connection', function ($socket) use ($io) {
             $headers = $socket->request->headers;
@@ -170,12 +174,64 @@ class SnmpWorker extends LnmsCommand
             $socket->on('watch', function ($msg) use ($io, $socket, $real_ip) {
                 $socket->join($msg);
                 $this->logSocketIO('watched:' . $real_ip . '-->' . $msg);
+                // 提高设备数据刷新率
+                $this->_queue->insert([
+                    'ip' => $msg,
+                    'count' => 0
+                ], 0);
             });
             $socket->on('unWatch', function ($msg) use ($io, $socket, $real_ip) {
                 $socket->leave($msg);
-                $this->logSocketIO('watched:' . $real_ip . '-->' . $msg);
+                $this->logSocketIO('unWatched:' . $real_ip . '-->' . $msg);
+                // TODO 取消对设备刷新率的提高
             });
         });
+    }
+
+    // 快速刷新
+    private $_queue = null;
+    public function fastRefresh()
+    {
+        if (!$this->_queue->current()) {
+            return;
+        }
+        $nextRound = [];
+        while ($current = $this->_queue->current()) {
+            if (($current['count'] += 1) >= 60) {
+                $this->logSocketIO('done refresh:' . $current['ip']);
+                unset($current);
+                $this->_queue->next();
+                continue;
+            }
+
+            try {
+                $proc = Process::fromShellCommandline("lnms device:poll {$current['ip']} -m sensors/state &");
+                $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
+
+                $proc->run();
+                $exitCode = $proc->getExitCode();
+                $output = $proc->getOutput();
+                $stderr = $proc->getErrorOutput();
+
+                $this->logSocketIO("fastRefresh-->ip:{$current['ip']},cmd:{$proc->getCommandLine()},exitCode:{$exitCode},output:{$output},stderr:{$stderr}");
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
+
+            // 如果反复watch，这里保证至多重复刷新一次
+            if (array_key_exists($current['ip'], $nextRound)) {
+                $nextRound[$current['ip']]['count'] = min($nextRound[$current['ip']]['count'], $$current['count']);
+            } else {
+                $nextRound[$current['ip']] = $current;
+            }
+
+            $this->_queue->next();
+        }
+        foreach ($nextRound as $ip => $next) {
+            $this->_queue->insert($next, 0);
+        }
+        unset($current);
+        unset($nextRound);
     }
 
     public function onWorkerStart()
