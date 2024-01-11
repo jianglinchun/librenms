@@ -220,7 +220,7 @@ class SnmpWorker extends LnmsCommand
 
             // 如果反复watch，这里保证至多重复刷新一次
             if (array_key_exists($current['ip'], $nextRound)) {
-                $nextRound[$current['ip']]['count'] = min($nextRound[$current['ip']]['count'], $$current['count']);
+                $nextRound[$current['ip']]['count'] = min($nextRound[$current['ip']]['count'], $current['count']);
             } else {
                 $nextRound[$current['ip']] = $current;
             }
