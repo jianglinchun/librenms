@@ -114,7 +114,7 @@ class SnmpWorker extends LnmsCommand
         $this->socketIO = $io;
         $this->socketIO->on('workerStart', function () use ($io) {
             // TODO consider support redis username/password auth & db select
-            $redis = new RedisClient('redis://' . env('REDIS_HOST', '127.0.0.1') . ':' . env('REDIS_PORT', '6379'));
+            $redis = new RedisClient('redis://' . env('REDIS_HOST', '127.0.0.1') . ':' . env('REDIS_PORT', 6379));
             // TODO topic可配置
             // Workerman redis组件参考
             //  不能采用phpredis，否则会导致整个进程busy !!!!!

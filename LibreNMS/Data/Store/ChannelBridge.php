@@ -16,7 +16,7 @@ class ChannelBridge extends BaseDatastore
 
         $this->redis = new \Redis();
         try {
-            $this->redis->connect('redis', 6379);
+            $this->redis->connect(env('REDIS_HOST', 'redis'), env('REDIS_PORT', 6379));
         } catch (\Throwable $th) {
             Log::error('ChannelBridge Error: ' . $th->getMessage());
         }
