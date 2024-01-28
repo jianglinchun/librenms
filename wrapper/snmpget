@@ -1,0 +1,4 @@
+#!/usr/bin/env php
+<?php
+require __DIR__ . '/snmp.php';
+invoke_snmp_via_rpc('snmpget', $argc, $argv);
