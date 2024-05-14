@@ -29,11 +29,11 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery, Proces
             'SNMPv2-SMI::enterprises.9595.1.4',
         ], '-OUQs');
 
-        $DeviceInfo_data = snmp_hexstring(preg_replace('/\n/', '', $data['enterprises.9595.1.1']));
+        $DeviceInfo_data = snmp_hexstring(preg_replace('/\r|\n/', '', $data['enterprises.9595.1.1']));
         $DeviceNet_data = $data['enterprises.9595.1.2'];
-        $DeviceQua_data = snmp_hexstring(preg_replace('/\n/', '', $data['enterprises.9595.1.3']));
-        $E1Info_data = snmp_hexstring(preg_replace('/\n/', '', $data['enterprises.9595.1.4']));
-        
+        $DeviceQua_data = snmp_hexstring(preg_replace('/\r|\n/', '', $data['enterprises.9595.1.3']));
+        $E1Info_data = snmp_hexstring(preg_replace('/\r|\n/', '', $data['enterprises.9595.1.4']));
+
         $DeviceInfo = explode(',', $DeviceInfo_data);
         $DeviceNet = explode(',', $DeviceNet_data);
         $DeviceQua = explode(',', $DeviceQua_data);
@@ -50,7 +50,7 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery, Proces
             'DeviceNet' => $DeviceNet,
             'DeviceQua' => $DeviceQua,
             'E1Info' => $E1Info
-        ], JSON_UNESCAPED_UNICODE);
+        ], JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
     }
 
     // SNMPv2-SMI::enterprises.9595.1.12 1.3.6.1.4.1.9595.1.12 CpuRam.0 integer32 CPU\内存占用情况 前16位CPU，后16位内存
@@ -72,7 +72,8 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery, Proces
         return $processors;
     }
 
-    public function pollProcessors(array $processors) {
+    public function pollProcessors(array $processors)
+    {
         $data = [];
 
         foreach ($processors as $processor) {
@@ -98,7 +99,8 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery, Proces
         ]))->fillUsage(null, null, null, $useage));
     }
 
-    public function pollMempools(Collection $mempools){
+    public function pollMempools(Collection $mempools)
+    {
         $data = [];
 
         foreach ($mempools as $mem) {
