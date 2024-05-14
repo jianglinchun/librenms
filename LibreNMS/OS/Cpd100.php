@@ -22,17 +22,17 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery, Proces
         // SNMPv2-SMI::enterprises.9595.1.3 DeviceQua.0 设备类型、电路名称、速率类型、协议类型、承载业务、所属局站、客户名称
         // SNMPv2-SMI::enterprises.9595.1.4 E1Info.0 线路名称、保护路由1、保护路由2、主站[站点名称，装置标识、总入电路标识、接收1电路标识、接收2电路标识、ip地址，与从设备管理模式]、从站[站点名称，装置标识、总入电路标识、接收1电路标识、接收2电路标识、ip地址，与主设备管理模式]
         // TODO 采用cache方式获取? 后面请求复用？？
-        $data = array_values(\SnmpQuery::get([
+        $data = snmp_get_multi_oid($this->getDeviceArray(), [
             'SNMPv2-SMI::enterprises.9595.1.1',
             'SNMPv2-SMI::enterprises.9595.1.2',
             'SNMPv2-SMI::enterprises.9595.1.3',
             'SNMPv2-SMI::enterprises.9595.1.4',
-        ])->values());
+        ], '-OUQs');
 
-        $DeviceInfo_data = snmp_hexstring(preg_replace('/\n/', '', $data[0]));
-        $DeviceNet_data = $data[1];
-        $DeviceQua_data = snmp_hexstring(preg_replace('/\n/', '', $data[2]));
-        $E1Info_data = snmp_hexstring(preg_replace('/\n/', '', $data[3]));
+        $DeviceInfo_data = snmp_hexstring(preg_replace('/\n/', '', $data['enterprises.9595.1.1']));
+        $DeviceNet_data = $data['enterprises.9595.1.2'];
+        $DeviceQua_data = snmp_hexstring(preg_replace('/\n/', '', $data['enterprises.9595.1.3']));
+        $E1Info_data = snmp_hexstring(preg_replace('/\n/', '', $data['enterprises.9595.1.4']));
         
         $DeviceInfo = explode(',', $DeviceInfo_data);
         $DeviceNet = explode(',', $DeviceNet_data);
