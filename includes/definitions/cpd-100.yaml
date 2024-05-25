@@ -41,6 +41,7 @@ discovery_modules:
     vlans: false
     wireless: false
     fdb-table: false
+    ipv4-addresses: false
     ipv6-addresses: false
     storage: false
     bgp-peers: false
