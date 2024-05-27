@@ -1,0 +1,27 @@
+os: ZJIES-6028M
+text: 'ZJIES 6028M'
+type: network
+over:
+    - { graph: device_processor, text: 'CPU Usage' }
+    - { graph: device_mempool, text: 'Memory Usage' }
+discovery:
+    -
+        sysDescr_regex: 
+            - '/^ZJIES6028M.*/'
+            - '/^ +ZJIES6028M.*/'
+poller_modules:
+    wireless: false
+    ucd-diskio: false
+    storage: false
+    stp: false
+    hr-device: false
+    bgp-peers: false
+    vlans: false
+discovery_modules:
+    wireless: false
+    ucd-diskio: false
+    storage: false
+    stp: false
+    hr-device: false
+    bgp-peers: false
+    vlans: false
