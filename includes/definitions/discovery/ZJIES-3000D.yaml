@@ -1,4 +1,7 @@
 modules:
+    os:
+        sysDescr_regex:
+            - '/^ *(SWITCH ZJIES3000D.*?)\,(?<software>.*?)\,(?<hardware>.*?)\,Mac (?<serial>.*)$/'
     mempools:
         data:
             -
