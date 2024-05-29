@@ -17,6 +17,12 @@ poller_modules:
     hr-device: false
     bgp-peers: false
     vlans: false
+    entity-physical: false
+    ntp: false
+    fdb-table: false
+    mpls: false
+    sensors: false
+    ospf: false
 discovery_modules:
     wireless: false
     ucd-diskio: false
@@ -25,3 +31,8 @@ discovery_modules:
     hr-device: false
     bgp-peers: false
     vlans: false
+    entity-physical: false
+    ntp: false
+    fdb-table: false
+    mpls: false
+    sensors: false
