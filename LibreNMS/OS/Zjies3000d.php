@@ -7,8 +7,9 @@ use LibreNMS\Interfaces\Discovery\ProcessorDiscovery;
 use LibreNMS\Interfaces\Polling\ProcessorPolling;
 use LibreNMS\OS;
 
-// 中金鼎迅ZJIES 6028M型号设备支持
-class Zjies6028m extends OS implements ProcessorDiscovery, ProcessorPolling
+// 中金鼎迅ZJIES 3000D型号设备支持
+// TODO !!!和6028M一致，需要合并！！！！
+class Zjies3000d extends OS implements ProcessorDiscovery, ProcessorPolling
 {
     public function discoverProcessors()
     {
