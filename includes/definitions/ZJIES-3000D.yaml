@@ -6,10 +6,8 @@ over:
     - { graph: device_mempool, text: 'Memory Usage' }
 discovery:
     -
-        snmpget:
-            oid: sysDescr.0
-            op: 'starts'
-            value: 'SWITCH ZJIES3000D'
+        sysDescr_regex: 
+            - '/^ *SWITCH ZJIES3000D.*/'
 poller_modules:
     wireless: false
     ucd-diskio: false
