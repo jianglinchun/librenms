@@ -26,7 +26,7 @@ class SnmpWorker extends LnmsCommand
 
     // TODO 配置界面
     const LIBRENMS_BRIDGE_SOCKETIO_PORT = 3161;
-    const LIBRENMS_BRIDGE_MEASUREMENT = ['processors', 'mempool', 'ports', 'sensor'];
+    const LIBRENMS_BRIDGE_MEASUREMENT = ['processors', 'mempool', 'ports', 'sensor', 'uptime'];
     const SNMP_SET_TYPE = ['i', 'u', 't', 'a', 'o', 's', 'x', 'd', 'b'];
 
     protected $worker;
