@@ -183,13 +183,13 @@ create_sensor_to_state_index($device, $state_name, $index);
 
 // // ---- 延时设置 ----
 // // 1.3.6.1.4.1.9595.1.11 CmdDelay.0 命令延时时间设置 通道切换中的保持时间（1~120ms）
-// $CmdDelay = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.11', '-Ovqe');
-// $cur_oid = '.1.3.6.1.4.1.9595.1.11';
-// $index = '0';
-// $state_name = 'CmdDelay';
-// $descr = 'CmdDelay (1~120ms)';
-// //Discover Sensors
-// discover_sensor($valid['sensor'], 'current', $device, $cur_oid, $index, $state_name, $descr, 1, 1, null, null, null, null, $CmdDelay);
+$CmdDelay = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.11', '-Ovqe');
+$cur_oid = '.1.3.6.1.4.1.9595.1.11';
+$index = '0';
+$state_name = 'CmdDelay';
+$descr = 'CmdDelay (1~120ms)';
+//Discover Sensors
+discover_sensor($valid['sensor'], 'current', $device, $cur_oid, $index, $state_name, $descr, 1, 1, null, null, null, null, $CmdDelay);
 
 // // ---- 性能管理 ----
 // // 1.3.6.1.4.1.9595.1.15 statisticsLog 统计日志 ES ,ESR, SES, SESR
