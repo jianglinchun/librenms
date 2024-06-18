@@ -8,7 +8,7 @@ discovery:
     -
         sysDescr_regex: 
             - '/^ *(ZJIES6028M.*?)\,(?<hardware>.*?)\,Mac (?<serial>.*)$/'
-            - '/^ *(SWITCH ZJIES6028M.*?)\,(?.*?)\,(?<hardware>.*?)\,Mac (?<serial>.*)$/'
+            - '/^ *(SWITCH ZJIES6028M.*?)\,(.*?)\,(?<hardware>.*?)\,Mac (?<serial>.*)$/'
 poller_modules:
     wireless: false
     ucd-diskio: false
