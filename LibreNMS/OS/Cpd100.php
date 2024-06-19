@@ -3,6 +3,7 @@
 namespace LibreNMS\OS;
 
 use App\Models\Device;
+use App\Models\Location;
 use LibreNMS\Device\Processor;
 use App\Models\Mempool;
 use LibreNMS\Interfaces\Discovery\ProcessorDiscovery;
@@ -17,6 +18,14 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery, Proces
 {
     public function discoverOS(Device $device): void
     {
+        try {
+            $this->initDetect($device);
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+    }
+
+    protected function initDetect(Device $device): void {
         // SNMPv2-SMI::enterprises.9595.1.1 DeviceInfo.0 设备名称(CPD-100)，CPD-100局站，网管主机IP，网管主机端口，网关，备注
         // SNMPv2-SMI::enterprises.9595.1.2 DeviceNet.0 设备IP+MAC+端口（SNMP
         // SNMPv2-SMI::enterprises.9595.1.3 DeviceQua.0 设备类型、电路名称、速率类型、协议类型、承载业务、所属局站、客户名称
@@ -40,9 +49,12 @@ class Cpd100 extends OS implements ProcessorDiscovery, MempoolsDiscovery, Proces
         $E1Info = explode(',', $E1Info_data);
 
         $device->sysName =  $DeviceInfo[0];
+        // 地址信息对应局站是自动的，这里的代码很重要
+        $location = new Location();
+        $location->location = $DeviceInfo[1];
+        $device->setLocation($location);
         $device->sysDescr = $DeviceInfo_data;
         $device->sysObjectID = '1.3.6.1.4.1.9595.1.1';
-        $device->override_sysLocation = true;
         $device->serial = $DeviceNet[1];
         $device->display = $DeviceInfo[0];
         $device->notes = json_encode([
