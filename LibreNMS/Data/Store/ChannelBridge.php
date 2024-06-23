@@ -33,7 +33,7 @@ class ChannelBridge extends BaseDatastore
     }
 
     // TODO 进行配置
-    const filtered_measurement = ['poller-perf', 'ping-perf', 'netstats-icmp', 'netstats-ip', 'netstats-snmp', 'netstats-udp', 'netstats-tcp', 'netstats-ip_forward', 'availability', 'ipSystemStats'];
+    const filtered_measurement = ['poller-perf', 'ping-perf', 'icmp-perf', 'netstats-icmp', 'netstats-ip', 'netstats-snmp', 'netstats-udp', 'netstats-tcp', 'netstats-ip_forward', 'availability', 'ipSystemStats'];
     public function put($device, $measurement, $tags, $fields)
     {
         if (in_array($measurement, $this::filtered_measurement)) {
