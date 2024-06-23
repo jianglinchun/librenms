@@ -51,7 +51,6 @@ class SnmpWorker extends LnmsCommand
         include_once base_path('includes/snmp.inc.php');
 
         $this->_queue = new \SplPriorityQueue();
-        // $this->initTrapReceiver();
         $this->initSocketIO();
         $this->initWorker();
     }
@@ -91,20 +90,6 @@ class SnmpWorker extends LnmsCommand
 
         // 避免重启以后该文件仍然存在，导致无法启动新进程的问题，所以修改到/tmp目录下
         Worker::$pidFile = '/tmp/snmpworker.pid';
-    }
-
-    // CPD100专用Trap?
-    protected function initTrapReceiver()
-    {
-        $this->trapReceiver = new Worker('');
-        $this->trapReceiver->name = 'CPD100 Trap Receiver';
-        $this->trapReceiver->onWorkerStart = function () {
-            $listener = new TrapListener();
-            $trapSink = new TrapSink($listener, [
-                'port' => 666
-            ]);
-            $trapSink->listen();
-        };
     }
 
     const redis_subscribe_channel = ['snmp:*', 'snmptrap:*'];
@@ -175,10 +160,10 @@ class SnmpWorker extends LnmsCommand
                 $socket->join($msg);
                 $this->logSocketIO('watched:' . $real_ip . '-->' . $msg);
                 // 提高设备数据刷新率
-                $this->_queue->insert([
-                    'ip' => $msg,
-                    'count' => 0
-                ], 0);
+                // $this->_queue->insert([
+                //     'ip' => $msg,
+                //     'count' => 0
+                // ], 0);
             });
             $socket->on('unWatch', function ($msg) use ($io, $socket, $real_ip) {
                 $socket->leave($msg);
