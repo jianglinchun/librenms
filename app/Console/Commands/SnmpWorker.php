@@ -93,6 +93,8 @@ class SnmpWorker extends LnmsCommand
     }
 
     const redis_subscribe_channel = ['snmp:*', 'snmptrap:*'];
+    const fastRefresh_internval = 30; // 快速刷新时间间隔秒数
+    const max_fastRefresh_period = 10 * 60; // 快速刷新持续秒数
     protected function initSocketIO()
     {
         $io = new SocketIO($this::LIBRENMS_BRIDGE_SOCKETIO_PORT);
@@ -150,20 +152,22 @@ class SnmpWorker extends LnmsCommand
                 unset($fields);
             });
 
-            $io->timer = Timer::add(10, array($this, 'fastRefresh'), array(), true);
+            $io->timer = Timer::add($this::fastRefresh_internval, array($this, 'fastRefresh'), array(), true);
         });
         $this->socketIO->on('connection', function ($socket) use ($io) {
             $headers = $socket->request->headers;
             $real_ip = $headers['x-real-ip'];
             $user_agent = $headers['user-agent'];
             $socket->on('watch', function ($msg) use ($io, $socket, $real_ip) {
-                $socket->join($msg);
+                $watchRequest = explode('@', $msg);
+                $socket->join($watchRequest[0]);
                 $this->logSocketIO('watched:' . $real_ip . '-->' . $msg);
                 // 提高设备数据刷新率
-                // $this->_queue->insert([
-                //     'ip' => $msg,
-                //     'count' => 0
-                // ], 0);
+                $this->_queue->insert([
+                    'ip' => $msg,
+                    'count' => 0,
+                    'm' => count($watchRequest) > 1 ? $watchRequest[1] : 'core'
+                ], 0);
             });
             $socket->on('unWatch', function ($msg) use ($io, $socket, $real_ip) {
                 $socket->leave($msg);
@@ -182,7 +186,14 @@ class SnmpWorker extends LnmsCommand
         }
         $nextRound = [];
         while ($current = $this->_queue->current()) {
-            if (($current['count'] += 1) >= 60) {
+            // 如果反复watch，这里保证至多重复刷新一次
+            if (array_key_exists($current['ip'], $nextRound)) {
+                $nextRound[$current['ip']]['count'] = min($nextRound[$current['ip']]['count'], $current['count']);
+                $this->_queue->next();
+                continue;
+            }
+
+            if (($current['count'] += 1) >= $this::max_fastRefresh_period / $this::fastRefresh_internval) {
                 $this->logSocketIO('done refresh:' . $current['ip']);
                 unset($current);
                 $this->_queue->next();
@@ -190,26 +201,18 @@ class SnmpWorker extends LnmsCommand
             }
 
             try {
-                $proc = Process::fromShellCommandline("lnms device:poll {$current['ip']} -m sensors/state &");
+                // Discovery module: https://docs.librenms.org/Support/Discovery%20Support/#os-based-discovery-config
+                // Poller module: https://docs.librenms.org/Support/Poller%20Support/
+                // Sensors: https://docs.librenms.org/Developing/os/Health-Information/
+                $proc = Process::fromShellCommandline("lnms device:poll {$current['ip']} -m {$current['m']}");
                 $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
-
-                $proc->run();
-                $exitCode = $proc->getExitCode();
-                $output = $proc->getOutput();
-                $stderr = $proc->getErrorOutput();
-
-                $this->logSocketIO("fastRefresh-->ip:{$current['ip']},cmd:{$proc->getCommandLine()},exitCode:{$exitCode},output:{$output},stderr:{$stderr}");
+                $proc->start();
+                $this->logSocketIO("fastRefresh-->ip:{$current['ip']},cmd:{$proc->getCommandLine()}");
             } catch (\Throwable $th) {
-                //throw $th;
+                $this->logSocketIO("fastRefresh-->exception:{$th->getMessage()}");
             }
 
-            // 如果反复watch，这里保证至多重复刷新一次
-            if (array_key_exists($current['ip'], $nextRound)) {
-                $nextRound[$current['ip']]['count'] = min($nextRound[$current['ip']]['count'], $current['count']);
-            } else {
-                $nextRound[$current['ip']] = $current;
-            }
-
+            $nextRound[$current['ip']] = $current;
             $this->_queue->next();
         }
         foreach ($nextRound as $ip => $next) {
