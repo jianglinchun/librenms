@@ -164,7 +164,7 @@ class SnmpWorker extends LnmsCommand
                 $this->logSocketIO('watched:' . $real_ip . '-->' . $msg);
                 // 提高设备数据刷新率
                 $this->_queue->insert([
-                    'ip' => $msg,
+                    'ip' => $watchRequest[0],
                     'count' => 0,
                     'm' => count($watchRequest) > 1 ? $watchRequest[1] : 'core'
                 ], 0);
@@ -189,11 +189,12 @@ class SnmpWorker extends LnmsCommand
             // 如果反复watch，这里保证至多重复刷新一次
             if (array_key_exists($current['ip'], $nextRound)) {
                 $nextRound[$current['ip']]['count'] = min($nextRound[$current['ip']]['count'], $current['count']);
+                unset($current);
                 $this->_queue->next();
                 continue;
             }
 
-            if (($current['count'] += 1) >= $this::max_fastRefresh_period / $this::fastRefresh_internval) {
+            if (($current['count'] += 1) >= ($this::max_fastRefresh_period / $this::fastRefresh_internval)) {
                 $this->logSocketIO('done refresh:' . $current['ip']);
                 unset($current);
                 $this->_queue->next();
