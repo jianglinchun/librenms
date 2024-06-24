@@ -14,9 +14,16 @@ poller_modules:
     storage: false
     stp: false
     hr-device: false
+    ipmi: false
+    hr-mib: false
+    ucd-mib: false
+    netstats: false
 discovery_modules:
     wireless: false
     ucd-diskio: false
     storage: false
     stp: false
     hr-device: false
+    ipmi: false
+    hr-mib: false
+    ucd-mib: false
