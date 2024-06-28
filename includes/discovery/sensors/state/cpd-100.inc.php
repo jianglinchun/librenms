@@ -4,10 +4,21 @@
 // SNMPv2-SMI::enterprises.9595.1.6 1.3.6.1.4.1.9595.1.6 ProMode.0 保护模式 有损-1、无损-0（default）
 // SNMPv2-SMI::enterprises.9595.1.7 1.3.6.1.4.1.9595.1.7 SwapMode.0 切换模式（可读、可写） 自动-0（default）、手动1-1、手动2-2
 
+$cpd_100_data = snmp_get_multi_oid($device, [
+    '.1.3.6.1.4.1.9595.1.5',
+    '.1.3.6.1.4.1.9595.1.6',
+    '.1.3.6.1.4.1.9595.1.7',
+    '.1.3.6.1.4.1.9595.1.10',
+    '.1.3.6.1.4.1.9595.1.13',
+    '.1.3.6.1.4.1.9595.1.14',
+    '.1.3.6.1.4.1.9595.1.19',
+    '.1.3.6.1.4.1.9595.1.11'
+], '-OUQe');
+
 // ---- 拨码配置 ----
 $cur_oid = '.1.3.6.1.4.1.9595.1.5';
 $index = '0';
-$DIPInfo = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.5', '-Ovqe');
+$DIPInfo = $cpd_100_data['enterprises.9595.1.5'];//snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.5', '-Ovqe');
 $state_name = 'DIPInfo';
 $descr = 'DIPInfo';
 $states = [];
@@ -21,7 +32,7 @@ create_sensor_to_state_index($device, $state_name, $index);
 // ---- 保护模式 ----
 $cur_oid = '.1.3.6.1.4.1.9595.1.6';
 $index = '0';
-$ProMode = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.6', '-Ovqe');;
+$ProMode = $cpd_100_data['enterprises.9595.1.6'];//snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.6', '-Ovqe');;
 $state_name = 'ProMode';
 $descr = 'Protection Mode';
 $states = [
@@ -39,7 +50,7 @@ create_sensor_to_state_index($device, $state_name, $index);
 $cur_oid = '.1.3.6.1.4.1.9595.1.7';
 $index = '0';
 // 这里的参数非常重要，特别是 e ,完整参数见 snmpget --help，不然这里无法争取获取数据
-$SwapMode = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.7', '-OQUvs');
+$SwapMode = $cpd_100_data['enterprises.9595.1.7'];//snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.7', '-OQUvs');
 $state_name = 'SwapMode';
 $descr = 'Swap Mode';
 $states = [
@@ -68,7 +79,7 @@ create_sensor_to_state_index($device, $state_name, $index);
 
 // ---- 环回测试 ----
 // 1.3.6.1.4.1.9595.1.10 RecircleTest.0 "开始近端环回\远端环回撤销环回"
-$RecircleTest = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.10', '-Ovqe');
+$RecircleTest = $cpd_100_data['enterprises.9595.1.10'];//snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.10', '-Ovqe');
 $cur_oid = '.1.3.6.1.4.1.9595.1.10';
 $index = '0';
 $state_name = 'RecircleTest';
@@ -94,7 +105,7 @@ create_sensor_to_state_index($device, $state_name, $index);
 // 1.3.6.1.4.1.9595.1.14 statisticsTime 统计时间 "0：不统计 1：15min 2:：30min 3：1hour 4：2hour 5：4hour 6：8hour 7：16hour 8：24hour"
 
 // ---- 统计标准（误码统计） ----
-$statisticsStand = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.13', '-Ovqe');;
+$statisticsStand = $cpd_100_data['enterprises.9595.1.13'];//snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.13', '-Ovqe');;
 $cur_oid = '.1.3.6.1.4.1.9595.1.13';
 $index = '0';
 $state_name = 'statisticsStand';
@@ -111,7 +122,7 @@ discover_sensor($valid['sensor'], 'state', $device, $cur_oid, $index, $state_nam
 create_sensor_to_state_index($device, $state_name, $index);
 
 // ---- 统计时间 ----
-$statisticsTime = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.14', '-Ovqe');;
+$statisticsTime = snmp_hexstring($cpd_100_data['enterprises.9595.1.14']);//snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.14', '-Ovqe');;
 $cur_oid = '.1.3.6.1.4.1.9595.1.14';
 $index = '0';
 $state_name = 'statisticsTime';
@@ -151,7 +162,7 @@ create_sensor_to_state_index($device, $state_name, $index);
 
 // ---- 灯状态 ----
 // 1.3.6.1.4.1.9595.1.19 DeviceLed.0 设备面板共计26个灯的状态查询
-$DeviceLed = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.19', '-Ovqe');
+$DeviceLed = $cpd_100_data['enterprises.9595.1.19'];//snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.19', '-Ovqe');
 $cur_oid = '.1.3.6.1.4.1.9595.1.19';
 $index = '0';
 $state_name = 'DeviceLed';
@@ -183,7 +194,7 @@ create_sensor_to_state_index($device, $state_name, $index);
 
 // // ---- 延时设置 ----
 // // 1.3.6.1.4.1.9595.1.11 CmdDelay.0 命令延时时间设置 通道切换中的保持时间（1~120ms）
-$CmdDelay = snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.11', '-Ovqe');
+$CmdDelay = $cpd_100_data['enterprises.9595.1.11'];//snmp_get($device, 'SNMPv2-SMI::enterprises.9595.1.11', '-Ovqe');
 $cur_oid = '.1.3.6.1.4.1.9595.1.11';
 $index = '0';
 $state_name = 'CmdDelay';
