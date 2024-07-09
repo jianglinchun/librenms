@@ -790,6 +790,8 @@ script it self at the top.
 
 ## FreeBSD NFS Client
 
+Superseded by the generalized NFS support.
+
 ### SNMP Extend
 
 1. Copy the shell script, fbsdnfsserver, to the desired host
@@ -814,6 +816,8 @@ the page. If it is not, please follow the steps set out under `SNMP
 Extend` heading top of page.
 
 ## FreeBSD NFS Server
+
+Superseded by the generalized NFS support.
 
 ### SNMP Extend
 
@@ -1578,7 +1582,62 @@ Extend` heading top of page.
 [Install the agent](Agent-Setup.md) on this device if it isn't already
 and copy the `nginx` script to `/usr/lib/check_mk_agent/local/`
 
-## NFS Server
+## NFS
+
+Provides both NFS client and server support.
+
+Currently supported OSes are as below.
+
+- FreeBSD
+- Linux
+
+### SNMPd extend
+
+1. Download the extend.
+```
+wget https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/nfs -O /etc/snmp/nfs
+```
+
+2. Make it executable.
+```
+chmod +x /etc/snmp/nfs
+```
+
+3. Add it to snmpd.conf.
+```
+extend nfs /usr/bin/env PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin /etc/snmp/nfs
+```
+
+4. Restart snmpd on your host
+
+5. Either wait for it to be rediscovered, rediscover it, or enable it.
+
+If using SELinux, the following is needed.
+
+1. `setsebool -P nis_enabled 1`
+
+2. Make a file (snmp_nfs.te) with the following contents and install
+   the policy with the command `semodule -i snmp_nfs.te`.
+```
+module snmp_nfs 1.0;
+
+require {
+        type mountd_port_t;
+        type snmpd_t;
+        type hi_reserved_port_t;
+        class tcp_socket { name_bind name_connect };
+        class udp_socket name_bind;
+}
+
+#============= snmpd_t ==============
+allow snmpd_t hi_reserved_port_t:tcp_socket name_bind;
+allow snmpd_t hi_reserved_port_t:udp_socket name_bind;
+allow snmpd_t mountd_port_t:tcp_socket name_connect;
+```
+
+## Linux NFS Server
+
+Superseded by the generalized NFS support.
 
 Export the NFS stats from as server.
 
@@ -1846,26 +1905,41 @@ using it as a agent.
 
 1. Copy the shell script, phpfpmsp, to the desired host
 ```
-wget https://github.com/librenms/librenms-agent/raw/master/snmp/phpfpmsp -O /etc/snmp/phpfpmsp
+wget https://github.com/librenms/librenms-agent/raw/master/snmp/php-fpm -O /etc/snmp/php-fpm
 ```
 
 2. Make the script executable
 ```
-chmod +x /etc/snmp/phpfpmsp
+chmod +x /etc/snmp/php-fpm
+```
+
+3. Install the depends.
+```shell
+# FreeBSD
+pkg install p5-File-Slurp p5-JSON p5-String-ShellQuote p5-MIME-Base64
+# Debian
+apt-get install libfile-slurp-perl libjson-perl libstring-shellquote-perl libmime-base64-perl
 ```
 
 3. Edit your snmpd.conf file (usually /etc/snmp/snmpd.conf) and add:
 ```
-extend phpfpmsp /etc/snmp/phpfpmsp
+extend phpfpmsp /etc/snmp/php-fpm
 ```
 
-4. Edit /etc/snmp/phpfpmsp to include the status URL for the PHP-FPM
-   pool you are monitoring.
+5. Create the config file
+   `/usr/local/etc/php-fpm_extend.json`. Alternate locations may be
+   specified using the the `-f` switch. Akin to like below. For more
+   information, see `/etc/snmp/php-fpm --help`.
+```json
+{
+"pools":{
+         "thefrog": "https://thefrog/fpm-status",
+         "foobar": "https://foo.bar/fpm-status"
+    }
+}
+```
 
-5. Restart snmpd on your host
-
-It is worth noting that this only monitors a single pool. If you want
-to monitor multiple pools, this won't do it.
+6. Restart snmpd on the host
 
 The application should be auto-discovered as described at the top of
 the page. If it is not, please follow the steps set out under `SNMP
