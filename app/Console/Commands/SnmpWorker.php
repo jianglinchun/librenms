@@ -166,7 +166,8 @@ class SnmpWorker extends LnmsCommand
                 $this->_queue->insert([
                     'ip' => $watchRequest[0],
                     'count' => 0,
-                    'm' => count($watchRequest) > 1 ? $watchRequest[1] : 'core'
+                    'm' => count($watchRequest) > 1 ? $watchRequest[1] : 'core',
+                    'proc' => null // 当前设备上一轮快速刷新的进程
                 ], 0);
             });
             $socket->on('unWatch', function ($msg) use ($io, $socket, $real_ip) {
@@ -186,6 +187,7 @@ class SnmpWorker extends LnmsCommand
         }
         $nextRound = [];
         while ($current = $this->_queue->current()) {
+            $this->clearDefunct($current);
             // 如果反复watch，这里保证至多重复刷新一次
             if (array_key_exists($current['ip'], $nextRound)) {
                 $nextRound[$current['ip']]['count'] = min($nextRound[$current['ip']]['count'], $current['count']);
@@ -205,9 +207,13 @@ class SnmpWorker extends LnmsCommand
                 // Discovery module: https://docs.librenms.org/Support/Discovery%20Support/#os-based-discovery-config
                 // Poller module: https://docs.librenms.org/Support/Poller%20Support/
                 // Sensors: https://docs.librenms.org/Developing/os/Health-Information/
-                $proc = Process::fromShellCommandline("lnms device:poll {$current['ip']} -m {$current['m']}");
-                $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
+                // lnms device:poll --help
+                //  -x, --no-data          Do not update datastores (RRD, InfluxDB, etc)
+                $proc = Process::fromShellCommandline("lnms device:poll {$current['ip']} -x -m {$current['m']}");
+                $proc->setTimeout($this::fastRefresh_internval);    //在一个快速刷新周期内必须完成，否则形成大量的僵尸进程
+                $proc->setIdleTimeout(10);
                 $proc->start();
+                $current['proc'] = $proc;
                 $this->logSocketIO("fastRefresh-->ip:{$current['ip']},cmd:{$proc->getCommandLine()}");
             } catch (\Throwable $th) {
                 $this->logSocketIO("fastRefresh-->exception:{$th->getMessage()}");
@@ -461,6 +467,22 @@ class SnmpWorker extends LnmsCommand
         unset($exitCode);
         unset($output);
         unset($stderr);
+    }
+
+    // 清理指定设备快速刷新上一轮执行的刷新进程
+    private function clearDefunct($current) {
+        $proc = $current['proc'];
+        if(is_null($proc)) {
+            return;
+        }
+        if($proc instanceof \Symfony\Component\Process\Process) {
+            if($proc->isRunning()) {
+                $proc->signal(SIGKILL); 
+            } else {
+                $proc->stop(1);
+            }
+        }
+        unset($proc);
     }
 
     private function logCommand(string $command): void
