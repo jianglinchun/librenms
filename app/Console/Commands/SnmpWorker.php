@@ -289,6 +289,7 @@ class SnmpWorker extends LnmsCommand
 
                 $proc = new Process($action_cmd);
                 $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
+                $proc->setIdleTimeout(10);
 
                 $this->logCommand($proc->getCommandLine());
 
@@ -325,6 +326,7 @@ class SnmpWorker extends LnmsCommand
                     // 用来格式化参数，确保没有问题
                     $proc = new Process($device_cmd);
                     $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
+                    $proc->setIdleTimeout(10);
 
                     $parallel_cmd[] = $proc->getCommandLine();
                     unset($proc);
@@ -346,6 +348,7 @@ class SnmpWorker extends LnmsCommand
             if (isset($device_cmd)) {
                 $proc = new Process($device_cmd);
                 $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
+                $proc->setIdleTimeout(10);
 
                 $this->logCommand($proc->getCommandLine());
                 $proc->run();
@@ -371,6 +374,7 @@ class SnmpWorker extends LnmsCommand
 
             $proc = new Process(explode(' ', $command));
             $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
+            $proc->setIdleTimeout(10);
 
             $this->logCommand($proc->getCommandLine());
             if ($parallel) {
@@ -379,7 +383,6 @@ class SnmpWorker extends LnmsCommand
                 continue;
             }
 
-            // 这样启动会产生defunct
             $proc->run();
             $exitCode = $proc->getExitCode();
             $output = $proc->getOutput();
@@ -454,6 +457,7 @@ class SnmpWorker extends LnmsCommand
         // parallel excute, Only for *unix
         $proc = Process::fromShellCommandline('echo -e "' . implode('\n', $parallel_cmd) . '" | ' . Config::get('parallel', 'parallel'));
         $proc->setTimeout(Config::get('snmp.exec_timeout', 1200));
+        $proc->setIdleTimeout(10);
 
         $this->logCommand($proc->getCommandLine());
 
@@ -476,11 +480,7 @@ class SnmpWorker extends LnmsCommand
             return;
         }
         if($proc instanceof \Symfony\Component\Process\Process) {
-            if($proc->isRunning()) {
-                $proc->signal(SIGKILL); 
-            } else {
-                $proc->stop(1);
-            }
+            $proc->stop(1);
         }
         unset($proc);
     }

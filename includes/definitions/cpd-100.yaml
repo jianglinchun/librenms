@@ -1,40 +1,20 @@
 os: cpd-100
 text: 'CPD 100'
 type: network
+bad_hrSystemUptime: true
+bad_snmpEngineTime: true
 over:
     - { graph: device_processor, text: 'CPU Usage' }
     - { graph: device_mempool, text: 'Memory Usage' }
 discovery:
     -
+        sysObjectID:
+            - .1.3.6.1.4.1.9595.1.
+    -
         snmpget:
             oid: SNMPv2-SMI::enterprises.9595.1.2
             op: 'contains'
             value: ','
-poller_modules:
-    ports: false
-    ports-stack: false
-    vlans: false
-    wireless: false
-    fdb-table: false
-    ipv6-addresses: false
-    storage: false
-    bgp-peers: false
-    arp-table: false
-    mpls: false
-    services: false
-    hr-device: false
-    hr-mib: false
-    discovery-protocols: false
-    cisco-vrf-lite: false
-    ucd-diskio: false
-    ucd-mib: false
-    ipSystemStats: false
-    ospf: false
-    customoid: false
-    ipmi: false
-    entity-physical: false
-    stp: false
-    netstats: false
 discovery_modules:
     ports: false
     ports-stack: false
@@ -56,6 +36,31 @@ discovery_modules:
     ucd-mib: false
     ospf: false
     ipSystemStats: false
+    ipmi: false
+    entity-physical: false
+    stp: false
+    netstats: false
+poller_modules:
+    ports: false
+    ports-stack: false
+    vlans: false
+    wireless: false
+    fdb-table: false
+    ipv6-addresses: false
+    storage: false
+    bgp-peers: false
+    arp-table: false
+    mpls: false
+    services: false
+    hr-device: false
+    hr-mib: false
+    discovery-protocols: false
+    cisco-vrf-lite: false
+    ucd-diskio: false
+    ucd-mib: false
+    ipSystemStats: false
+    ospf: false
+    customoid: false
     ipmi: false
     entity-physical: false
     stp: false

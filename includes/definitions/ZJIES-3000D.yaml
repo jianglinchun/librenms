@@ -8,6 +8,7 @@ discovery:
     -
         sysDescr_regex: 
             - '/^ *SWITCH ZJIES3000D.*/'
+bad_ifXEntry: true
 poller_modules:
     wireless: false
     ucd-diskio: false
@@ -18,6 +19,8 @@ poller_modules:
     hr-mib: false
     ucd-mib: false
     netstats: false
+    ipSystemStats: false
+    bgp-peers: false
 discovery_modules:
     wireless: false
     ucd-diskio: false
@@ -27,3 +30,5 @@ discovery_modules:
     ipmi: false
     hr-mib: false
     ucd-mib: false
+    ipSystemStats: false
+    bgp-peers: false
